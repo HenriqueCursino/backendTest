@@ -9,16 +9,16 @@ import (
 )
 
 type Repository interface {
-	CreateNewUser(user model.User)
-	CreateNewAccount(account model.Account)
-	UpdateAccontBalance(account model.Account, where int)
-	CreateTransaction(transaction model.Transactions)
-	UpdateStatusId(where int)
-	RemoveMoney(where, newBalance int)
-	AddMoney(where, newBalance int)
-	GetAccountPayer(document int) model.Account
-	GetAccountReceiver(document int) model.Account
-	GetUserPayer(document int) model.User
+	CreateNewUser(user model.User) error
+	// CreateNewAccount(account model.Account)
+	// UpdateAccontBalance(account model.Account, where int)
+	// CreateTransaction(transaction model.Transactions)
+	// UpdateStatusId(where int)
+	// RemoveMoney(where, newBalance int)
+	// AddMoney(where, newBalance int)
+	// GetAccountPayer(document int) model.Account
+	// GetAccountReceiver(document int) model.Account
+	// GetUserPayer(document int) model.User
 }
 
 type repository struct {
@@ -29,12 +29,11 @@ func NewRepository(db *gorm.DB) Repository {
 	return &repository{db}
 }
 
-func (repo *repository) CreateNewUser(user model.User) {
-	err := repo.db.Table("users").Create(&user).Error
-	if err != nil {
-		fmt.Println("failed to create user!", err.Error())
-		return
+func (repo *repository) CreateNewUser(user model.User) error {
+	if err := repo.db.Table("users").Create(&user).Error; err != nil {
+		return err
 	}
+	return nil
 }
 
 func (repo *repository) CreateNewAccount(account model.Account) {
