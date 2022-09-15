@@ -10,7 +10,7 @@ import (
 
 type Repository interface {
 	CreateNewUser(user model.User) error
-	// CreateNewAccount(account model.Account)
+	CreateNewAccount(account model.Account) error
 	// UpdateAccontBalance(account model.Account, where int)
 	// CreateTransaction(transaction model.Transactions)
 	// UpdateStatusId(where int)
@@ -36,12 +36,12 @@ func (repo *repository) CreateNewUser(user model.User) error {
 	return nil
 }
 
-func (repo *repository) CreateNewAccount(account model.Account) {
+func (repo *repository) CreateNewAccount(account model.Account) error {
 	err := repo.db.Table("accounts").Create(&account).Error
 	if err != nil {
-		fmt.Println("failed to add balance!", err.Error())
-		return
+		return err
 	}
+	return nil
 }
 
 func (repo *repository) UpdateAccontBalance(account model.Account, where int) {

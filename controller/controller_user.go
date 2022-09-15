@@ -11,8 +11,8 @@ import (
 
 type Controller interface {
 	CreateUser(c *gin.Context)
+	CreateAccount(c *gin.Context)
 	// Transfer(c *gin.Context)
-	// CreateAccount(c *gin.Context)
 	// UpdateBalance(c *gin.Context)
 }
 
@@ -20,6 +20,7 @@ type controller struct {
 	repo Repository
 }
 
+// função para receber os métodos da interface
 func NewController(repo Repository) Controller {
 	return &controller{
 		repo: repo,
@@ -48,22 +49,25 @@ func (ctl *controller) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, "User created sucessfully!")
 }
 
-// func (ctl *controller) CreateAccount(c *gin.Context) {
+func (ctl *controller) CreateAccount(c *gin.Context) {
 
-// 	balanceRequest := dto.AccountRequest{}
-// 	c.ShouldBindJSON(&balanceRequest)
+	balanceRequest := dto.AccountRequest{}
+	c.ShouldBindJSON(&balanceRequest)
 
-// 	documentInt := treatDoc(balanceRequest.CpfCnpj)
+	documentInt := treatDoc(balanceRequest.CpfCnpj)
 
-// 	balance := model.Account{
-// 		CpfCnpj: int64(documentInt),
-// 		Balance: balanceRequest.Balance,
-// 	}
+	balance := model.Account{
+		CpfCnpj: int64(documentInt),
+		Balance: balanceRequest.Balance,
+	}
 
-// 	ctl.repo.CreateNewAccount(balance)
+	err := ctl.repo.CreateNewAccount(balance)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, "failed to create account!")
+	}
 
-// 	c.JSON(http.StatusOK, "deposit made successfully!")
-// }
+	c.JSON(http.StatusOK, "account created successfully!")
+}
 
 // func (ctl *controller) UpdateBalance(c *gin.Context) {
 // 	balanceRequest := dto.AccountRequest{}
