@@ -5,26 +5,48 @@ import (
 
 	"github.com/henriquecursino/desafioQ2/common"
 	"github.com/henriquecursino/desafioQ2/model"
+	"gorm.io/gorm"
 )
 
-func (ctl *Controller) CreateNewUser(user model.User) {
-	err := ctl.db.Table("users").Create(&user).Error
+type Repository interface {
+	CreateNewUser(user model.User)
+	CreateNewAccount(account model.Account)
+	UpdateAccontBalance(account model.Account, where int)
+	CreateTransaction(transaction model.Transactions)
+	UpdateStatusId(where int)
+	RemoveMoney(where, newBalance int)
+	AddMoney(where, newBalance int)
+	GetAccountPayer(document int) model.Account
+	GetAccountReceiver(document int) model.Account
+	GetUserPayer(document int) model.User
+}
+
+type repository struct {
+	db *gorm.DB
+}
+
+func NewRepository(db *gorm.DB) Repository {
+	return &repository{db}
+}
+
+func (repo *repository) CreateNewUser(user model.User) {
+	err := repo.db.Table("users").Create(&user).Error
 	if err != nil {
 		fmt.Println("failed to create user!", err.Error())
 		return
 	}
 }
 
-func (ctl *Controller) CreateNewAccount(account model.Account) {
-	err := ctl.db.Table("accounts").Create(&account).Error
+func (repo *repository) CreateNewAccount(account model.Account) {
+	err := repo.db.Table("accounts").Create(&account).Error
 	if err != nil {
 		fmt.Println("failed to add balance!", err.Error())
 		return
 	}
 }
 
-func (ctl *Controller) UpdateAccontBalance(account model.Account, where int) {
-	err := ctl.db.Table("accounts").
+func (repo *repository) UpdateAccontBalance(account model.Account, where int) {
+	err := repo.db.Table("accounts").
 		Where("cpf_cnpj =?", where).
 		Update("balance", account.Balance).
 		Error
@@ -33,15 +55,15 @@ func (ctl *Controller) UpdateAccontBalance(account model.Account, where int) {
 	}
 }
 
-func (ctl *Controller) CreateTransaction(transaction model.Transactions) {
-	err := ctl.db.Table("transactions").Create(&transaction).Error
+func (repo *repository) CreateTransaction(transaction model.Transactions) {
+	err := repo.db.Table("transactions").Create(&transaction).Error
 	if err != nil {
 		fmt.Println("failed to create transaction!", err.Error())
 	}
 }
 
-func (ctl *Controller) UpdateStatusId(where int) {
-	err := ctl.db.Table("transactions").
+func (repo *repository) UpdateStatusId(where int) {
+	err := repo.db.Table("transactions").
 		Where("id = ?", where).
 		Update("id_status", common.STATUS_CONCLUIDO).
 		Error
@@ -50,8 +72,8 @@ func (ctl *Controller) UpdateStatusId(where int) {
 	}
 }
 
-func (ctl *Controller) RemoveMoney(where, newBalance int) {
-	err := ctl.db.
+func (repo *repository) RemoveMoney(where, newBalance int) {
+	err := repo.db.
 		Table("accounts").
 		Where("cpf_cnpj = ?", where).
 		Update("balance", newBalance).
@@ -61,8 +83,8 @@ func (ctl *Controller) RemoveMoney(where, newBalance int) {
 	}
 }
 
-func (ctl *Controller) AddMoney(where, newBalance int) {
-	err := ctl.db.
+func (repo *repository) AddMoney(where, newBalance int) {
+	err := repo.db.
 		Table("accounts").
 		Where("cpf_cnpj = ?", where).
 		Update("balance", newBalance).
@@ -70,4 +92,22 @@ func (ctl *Controller) AddMoney(where, newBalance int) {
 	if err != nil {
 		fmt.Println("Failed to update balance!", err.Error())
 	}
+}
+
+func (repo *repository) GetAccountPayer(document int) model.Account {
+	accountPayer := model.Account{}
+	repo.db.Table("accounts").Where("cpf_cnpj = ?", &document).First(&accountPayer)
+	return accountPayer
+}
+
+func (repo *repository) GetAccountReceiver(document int) model.Account {
+	accountReceiver := model.Account{}
+	repo.db.Table("accounts").Where("cpf_cnpj = ?", &document).First(&accountReceiver)
+	return accountReceiver
+}
+
+func (repo *repository) GetUserPayer(document int) model.User {
+	accountPayer := model.User{}
+	repo.db.Table("users").Where("cpf_cnpj = ?", document).First(&accountPayer)
+	return accountPayer
 }

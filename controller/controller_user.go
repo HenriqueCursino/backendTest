@@ -10,25 +10,30 @@ import (
 	"github.com/henriquecursino/desafioQ2/integrations"
 	"github.com/henriquecursino/desafioQ2/model"
 	"github.com/henriquecursino/desafioQ2/tools"
-	"gorm.io/gorm"
 )
 
-type Controller struct {
-	db *gorm.DB
+type Controller interface {
+	Transfer(c *gin.Context)
+	CreateUser(c *gin.Context)
+	CreateAccount(c *gin.Context)
+	UpdateBalance(c *gin.Context)
 }
 
-func NewController(db *gorm.DB) Controller {
-	return Controller{
-		db: db,
+type controller struct {
+	repo Repository
+}
+
+func NewController(repo Repository) Controller {
+	return &controller{
+		repo: repo,
 	}
 }
 
-func (ctl *Controller) CreateUser(c *gin.Context) {
+func (ctl *controller) CreateUser(c *gin.Context) {
 	UserRequest := dto.UserRequest{}
 	c.ShouldBindJSON(&UserRequest)
 
-	documentUnmasked := tools.RemoveMask(&UserRequest.CpfCnpj)
-	documentInt, _ := tools.ConvertStrToInt(documentUnmasked)
+	documentInt := treatDoc(UserRequest.CpfCnpj)
 
 	user := model.User{
 		CpfCnpj:    int64(documentInt),
@@ -38,42 +43,39 @@ func (ctl *Controller) CreateUser(c *gin.Context) {
 		Password:   UserRequest.Password,
 	}
 
-	ctl.CreateNewUser(user)
+	ctl.repo.CreateNewUser(user)
 
 	c.JSON(http.StatusOK, "User created sucessfully!")
 }
 
-func (ctl *Controller) CreateAccount(c *gin.Context) {
+func (ctl *controller) CreateAccount(c *gin.Context) {
 
 	balanceRequest := dto.AccountRequest{}
 	c.ShouldBindJSON(&balanceRequest)
 
-	documentUnmasked := tools.RemoveMask(&balanceRequest.CpfCnpj)
-	documentInt, _ := tools.ConvertStrToInt(documentUnmasked)
+	documentInt := treatDoc(balanceRequest.CpfCnpj)
 
 	balance := model.Account{
 		CpfCnpj: int64(documentInt),
 		Balance: balanceRequest.Balance,
 	}
 
-	ctl.CreateNewAccount(balance)
+	ctl.repo.CreateNewAccount(balance)
 
 	c.JSON(http.StatusOK, "deposit made successfully!")
 }
 
-func (ctl *Controller) UpdateBalance(c *gin.Context) {
+func (ctl *controller) UpdateBalance(c *gin.Context) {
 	balanceRequest := dto.AccountRequest{}
 	c.ShouldBindJSON(&balanceRequest)
 
-	documentUnmasked := tools.RemoveMask(&balanceRequest.CpfCnpj)
-	documentInt, _ := tools.ConvertStrToInt(documentUnmasked)
+	documentInt := treatDoc(balanceRequest.CpfCnpj)
 
 	balance := model.Account{
 		CpfCnpj: int64(documentInt),
 		Balance: balanceRequest.Balance,
 	}
-
-	ctl.UpdateAccontBalance(balance, documentInt)
+	ctl.repo.UpdateAccontBalance(balance, documentInt)
 
 	balanceResponse := model.Account{}
 	balanceResponse.CpfCnpj = int64(documentInt)
@@ -81,24 +83,18 @@ func (ctl *Controller) UpdateBalance(c *gin.Context) {
 	c.JSON(http.StatusOK, "Balance update successfully!")
 }
 
-func (ctl *Controller) Transfer(c *gin.Context) {
+func (ctl *controller) Transfer(c *gin.Context) {
 	documentPayerInt, _ := tools.ConvertStrToInt(c.Param("doc"))
 
 	transferRequest := dto.TransferRequest{}
 	c.ShouldBindJSON(&transferRequest)
 
-	documentPayee := tools.RemoveMask(&transferRequest.CpfPayee)
-	documentPayeeInt, _ := tools.ConvertStrToInt(documentPayee)
+	documentPayee := treatDoc(transferRequest.CpfPayee)
 
-	accountPayer := model.Account{}
-	accountReceiver := model.Account{}
-	statusTransaction := model.Status{}
-	userPayer := model.User{}
-
-	ctl.db.Table("statuses").Find(&statusTransaction)
-	ctl.db.Table("accounts").Where("cpf_cnpj = ?", &documentPayerInt).First(&accountPayer)
-	ctl.db.Table("accounts").Where("cpf_cnpj = ?", &documentPayeeInt).First(&accountReceiver)
-	ctl.db.Table("users").Where("cpf_cnpj = ?", &documentPayerInt).First(&userPayer)
+	accountPayer := ctl.repo.GetAccountPayer(documentPayerInt)
+	fmt.Print(accountPayer)
+	accountReceiver := ctl.repo.GetAccountReceiver(documentPayee)
+	userPayer := ctl.repo.GetUserPayer(documentPayerInt)
 
 	balanceError := integrations.ValidateTransfer(accountPayer.Balance, transferRequest.Value)
 	if balanceError != nil {
@@ -122,13 +118,12 @@ func (ctl *Controller) Transfer(c *gin.Context) {
 
 	data, errValid := integrations.ValidateTransaction()
 
-	ctl.CreateTransaction(transaction)
+	ctl.repo.CreateTransaction(transaction)
 
 	if data.Authorization {
 		transaction.IdStatus = common.STATUS_CONCLUIDO
 		ctl.DebitScheme(accountPayer, accountReceiver, transaction.Value)
-
-		ctl.UpdateStatusId(transaction.ID)
+		ctl.repo.UpdateStatusId(transaction.ID)
 
 		c.JSON(http.StatusOK, transaction)
 	} else {
@@ -136,10 +131,16 @@ func (ctl *Controller) Transfer(c *gin.Context) {
 	}
 }
 
-func (ctl *Controller) DebitScheme(Payer, Payee model.Account, value int) {
+func treatDoc(doc string) int {
+	documentUnmasked := tools.RemoveMask(&doc)
+	documentPayeeInt, _ := tools.ConvertStrToInt(documentUnmasked)
+	return documentPayeeInt
+}
+
+func (ctl *controller) DebitScheme(Payer, Payee model.Account, value int) {
 	newBalance := Payer.Balance - value
-	ctl.RemoveMoney(int(Payer.CpfCnpj), newBalance)
+	ctl.repo.RemoveMoney(int(Payer.CpfCnpj), newBalance)
 
 	addBalance := Payee.Balance + value
-	ctl.AddMoney(int(Payee.CpfCnpj), addBalance)
+	ctl.repo.AddMoney(int(Payee.CpfCnpj), addBalance)
 }

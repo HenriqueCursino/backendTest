@@ -10,7 +10,9 @@ func Router() {
 	router := gin.Default()
 
 	db := structure.Connect()
-	controller := controller.NewController(db)
+	repo := controller.NewRepository(db)
+
+	controller := controller.NewController(repo)
 
 	router.POST("/createUser", controller.CreateUser)
 
