@@ -12,8 +12,8 @@ import (
 type Controller interface {
 	CreateUser(c *gin.Context)
 	CreateAccount(c *gin.Context)
+	UpdateBalance(c *gin.Context)
 	// Transfer(c *gin.Context)
-	// UpdateBalance(c *gin.Context)
 }
 
 type controller struct {
@@ -69,23 +69,26 @@ func (ctl *controller) CreateAccount(c *gin.Context) {
 	c.JSON(http.StatusOK, "account created successfully!")
 }
 
-// func (ctl *controller) UpdateBalance(c *gin.Context) {
-// 	balanceRequest := dto.AccountRequest{}
-// 	c.ShouldBindJSON(&balanceRequest)
+func (ctl *controller) UpdateBalance(c *gin.Context) {
+	balanceRequest := dto.AccountRequest{}
+	c.ShouldBindJSON(&balanceRequest)
 
-// 	documentInt := treatDoc(balanceRequest.CpfCnpj)
+	documentInt := treatDoc(balanceRequest.CpfCnpj)
 
-// 	balance := model.Account{
-// 		CpfCnpj: int64(documentInt),
-// 		Balance: balanceRequest.Balance,
-// 	}
-// 	ctl.repo.UpdateAccontBalance(balance, documentInt)
+	balance := model.Account{
+		CpfCnpj: int64(documentInt),
+		Balance: balanceRequest.Balance,
+	}
+	err := ctl.repo.UpdateAccountBalance(balance, documentInt)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, "Failed to update balance!")
+	}
 
-// 	balanceResponse := model.Account{}
-// 	balanceResponse.CpfCnpj = int64(documentInt)
+	balanceResponse := model.Account{}
+	balanceResponse.CpfCnpj = int64(documentInt)
 
-// 	c.JSON(http.StatusOK, "Balance update successfully!")
-// }
+	c.JSON(http.StatusOK, "Balance update successfully!")
+}
 
 // func (ctl *controller) Transfer(c *gin.Context) {
 // 	documentPayerInt, _ := tools.ConvertStrToInt(c.Param("doc"))

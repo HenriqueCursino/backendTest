@@ -100,7 +100,7 @@ func TestCreateAccount(t *testing.T) {
 	})
 	t.Run("Failed - Should return StatusCode 400 (Bad Request)", func(t *testing.T) {
 		repository := new(TestRepositoryMock)
-		repository.Mock.On("CreateNewAccount", mockAccountRepository).Return(errors.New("failed to create account!"))
+		repository.Mock.On("CreateNewAccount", mockAccountRepository).Return(assert.AnError)
 
 		controller := NewController(repository)
 
@@ -114,6 +114,55 @@ func TestCreateAccount(t *testing.T) {
 		ctx.Request = req
 
 		controller.CreateAccount(ctx)
+
+		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+	})
+}
+
+func TestUpdateBalance(t *testing.T) {
+	mockUpdateBalanceBody := dto.AccountRequest{
+		CpfCnpj: "630.652.468-13",
+		Balance: 200,
+	}
+	mockUpdateBalanceRepository := model.Account{
+		CpfCnpj: 63065246813,
+		Balance: 200,
+	}
+	t.Run("Success - Should return StatusCode 200 (OK)", func(t *testing.T) {
+		repository := new(TestRepositoryMock)
+		repository.Mock.On("UpdateAccountBalance", mockUpdateBalanceRepository).Return(nil)
+
+		controller := NewController(repository)
+
+		mockAccountJson, _ := json.Marshal(mockUpdateBalanceBody)
+		mockAccountBuffer := bytes.NewBuffer(mockAccountJson)
+
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+
+		req, _ := http.NewRequest(http.MethodPut, "/", mockAccountBuffer)
+		ctx.Request = req
+
+		controller.UpdateBalance(ctx)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+	})
+	t.Run("Failed - Should return StatusCode 400 (BadRequest)", func(t *testing.T) {
+		repository := new(TestRepositoryMock)
+		repository.Mock.On("UpdateAccountBalance", mockUpdateBalanceRepository).Return(assert.AnError)
+
+		controller := NewController(repository)
+
+		mockAccountJson, _ := json.Marshal(mockUpdateBalanceBody)
+		mockAccountBuffer := bytes.NewBuffer(mockAccountJson)
+
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+
+		req, _ := http.NewRequest(http.MethodPut, "/", mockAccountBuffer)
+		ctx.Request = req
+
+		controller.UpdateBalance(ctx)
 
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 	})

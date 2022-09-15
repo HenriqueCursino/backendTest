@@ -21,3 +21,9 @@ func (repository *TestRepositoryMock) CreateNewAccount(account model.Account) er
 	getted := args.Error(0)
 	return getted
 }
+
+func (repository *TestRepositoryMock) UpdateAccountBalance(account model.Account, where int) error {
+	args := repository.Called(account)
+	getted := args.Error(0)
+	return getted
+}

@@ -11,7 +11,7 @@ import (
 type Repository interface {
 	CreateNewUser(user model.User) error
 	CreateNewAccount(account model.Account) error
-	// UpdateAccontBalance(account model.Account, where int)
+	UpdateAccountBalance(account model.Account, where int) error
 	// CreateTransaction(transaction model.Transactions)
 	// UpdateStatusId(where int)
 	// RemoveMoney(where, newBalance int)
@@ -44,14 +44,15 @@ func (repo *repository) CreateNewAccount(account model.Account) error {
 	return nil
 }
 
-func (repo *repository) UpdateAccontBalance(account model.Account, where int) {
+func (repo *repository) UpdateAccountBalance(account model.Account, where int) error {
 	err := repo.db.Table("accounts").
 		Where("cpf_cnpj =?", where).
 		Update("balance", account.Balance).
 		Error
 	if err != nil {
-		fmt.Println("failed to update balance", err.Error())
+		return err
 	}
+	return nil
 }
 
 func (repo *repository) CreateTransaction(transaction model.Transactions) {
