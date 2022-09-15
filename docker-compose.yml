@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  mysql-development:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: teste
+      MYSQL_PASSWORD: teste
+      MYSQL_USER: teste
+      MYSQL_DATABASE: desafioQ2
+    ports:
+      - "3306:3306"
