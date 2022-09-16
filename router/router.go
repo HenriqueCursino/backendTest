@@ -16,9 +16,9 @@ func Router() {
 
 	router.POST("/createUser", controller.CreateUser)
 
-	// router.POST("/depositUser", controller.CreateAccount)
-	// router.POST("/transfer/:doc", controller.Transfer)
-	// router.PUT("/updateBalance", controller.UpdateBalance)
+	router.POST("/depositUser", controller.CreateAccount)
+	router.POST("/transfer/:doc", controller.Transfer)
+	router.PUT("/updateBalance", controller.UpdateBalance)
 
 	router.Run(":8080")
 }

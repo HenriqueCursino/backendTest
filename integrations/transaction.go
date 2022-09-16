@@ -11,8 +11,18 @@ import (
 	"github.com/henriquecursino/desafioQ2/dto"
 )
 
-func ValidateTransaction() (*dto.Authorization, error) {
-	responseData, err := getExternalApi()
+type (
+	Integration struct{}
+
+	IIntegrations interface {
+		ValidateTransaction() (*dto.Authorization, error)
+		ValidateTransfer(payerBalance, value int) error
+		ValidateIsCommon(payerId int) error
+	}
+)
+
+func (i *Integration) ValidateTransaction() (*dto.Authorization, error) {
+	responseData, err := i.getExternalApi()
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +33,7 @@ func ValidateTransaction() (*dto.Authorization, error) {
 	return &data, err
 }
 
-func getExternalApi() ([]byte, error) {
+func (i *Integration) getExternalApi() ([]byte, error) {
 	url := os.Getenv("EXTERNAL_URL")
 	response, err := http.Get(url + common.END_POINT)
 	if err != nil {
@@ -33,14 +43,14 @@ func getExternalApi() ([]byte, error) {
 	return ioutil.ReadAll(response.Body)
 }
 
-func ValidateTransfer(payerBalance, value int) error {
+func (i *Integration) ValidateTransfer(payerBalance, value int) error {
 	if payerBalance < value {
 		return fmt.Errorf("payer doesn't have enough money")
 	}
 	return nil
 }
 
-func ValidateIsCommon(payerId int) error {
+func (i *Integration) ValidateIsCommon(payerId int) error {
 	if payerId == common.LOJISTA {
 		return fmt.Errorf("shopkeeper cannot make transfers")
 	}

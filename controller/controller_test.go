@@ -167,3 +167,96 @@ func TestUpdateBalance(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 	})
 }
+
+func TestGetAccountPayer(t *testing.T) {
+	mockIdPayerParams := "12345678910"
+	mockIdPayer := 12345678910
+	transactionAccount := 11122233344
+
+	mockCategoryPayer := model.Categories{
+		ID:   2,
+		Name: "commum",
+	}
+	mockCategoryReciver := model.Categories{
+		ID:   1,
+		Name: "lojista",
+	}
+
+	mockPayer := model.User{
+		CpfCnpj:    12345678910,
+		FullName:   "Henrique Cursino",
+		Email:      "henrique@gmail.com",
+		CategoryID: mockCategoryPayer.ID,
+		Password:   "123",
+	}
+
+	mockReciver := model.User{
+		CpfCnpj:    11122233344,
+		FullName:   "Guilherme Sembeneli",
+		Email:      "guilherme@gmail.com",
+		CategoryID: mockCategoryReciver.ID,
+		Password:   "1234",
+	}
+
+	mockAccountPayer := model.Account{
+		CpfCnpj: mockPayer.CpfCnpj,
+		Balance: 100,
+	}
+
+	mockAccountReciver := model.Account{
+		CpfCnpj: mockReciver.CpfCnpj,
+		Balance: 100,
+	}
+
+	mockStatusTransactionPending := model.Status{
+		ID:   1,
+		Name: "Pendente",
+	}
+	// mockStatusTransactionConcluded := model.Status{
+	// 	ID:   2,
+	// 	Name: "Concluido",
+	// }
+
+	transactionBody := dto.TransferRequest{
+		CpfPayee: "111.222.333-44",
+		Value:    10,
+	}
+
+	transactionRepository := model.Transactions{
+		IdPayer:  mockAccountPayer.ID,
+		Account:  mockAccountPayer,
+		IdPayee:  mockAccountReciver.ID,
+		IdStatus: mockStatusTransactionPending.ID,
+		Value:    10,
+	}
+
+	auth := dto.Authorization{}
+
+	t.Run("Success - Should return StatusCode 200 (OK)", func(t *testing.T) {
+		repository := new(TestRepositoryMock)
+		repository.Mock.On("GetAccountPayer", mockIdPayer).Return(mockAccountPayer, nil)
+		repository.Mock.On("GetAccountReceiver", transactionAccount).Return(mockAccountPayer, nil)
+		repository.Mock.On("GetUserPayer", mockIdPayer).Return(mockPayer, nil)
+		repository.Mock.On("ValidateTransfer", mockAccountPayer.Balance, transactionBody.Value).Return(nil)
+		repository.Mock.On("ValidateIsCommon", mockPayer.CategoryID).Return(nil)
+		repository.Mock.On("ValidateTransaction").Return(auth, nil)
+		repository.Mock.On("CreateTransaction", transactionRepository).Return(nil)
+		repository.Mock.On("UpdateStatusId", transactionRepository.ID).Return(nil)
+
+		controller := NewController(repository)
+
+		mockTransferJson, _ := json.Marshal(transactionBody)
+		mockTransferBuffer := bytes.NewBuffer(mockTransferJson)
+
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+
+		req, _ := http.NewRequest(http.MethodPost, "/", mockTransferBuffer)
+		ctx.Params = append(ctx.Params, gin.Param{Key: "doc", Value: mockIdPayerParams})
+		ctx.Request = req
+
+		controller.Transfer(ctx)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+	})
+}

@@ -1,10 +1,13 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/henriquecursino/desafioQ2/common"
 	"github.com/henriquecursino/desafioQ2/dto"
+	"github.com/henriquecursino/desafioQ2/integrations"
 	"github.com/henriquecursino/desafioQ2/model"
 	"github.com/henriquecursino/desafioQ2/tools"
 )
@@ -13,11 +16,12 @@ type Controller interface {
 	CreateUser(c *gin.Context)
 	CreateAccount(c *gin.Context)
 	UpdateBalance(c *gin.Context)
-	// Transfer(c *gin.Context)
+	Transfer(c *gin.Context)
 }
 
 type controller struct {
-	repo Repository
+	repo        Repository
+	integration integrations.Integration
 }
 
 // função para receber os métodos da interface
@@ -90,53 +94,62 @@ func (ctl *controller) UpdateBalance(c *gin.Context) {
 	c.JSON(http.StatusOK, "Balance update successfully!")
 }
 
-// func (ctl *controller) Transfer(c *gin.Context) {
-// 	documentPayerInt, _ := tools.ConvertStrToInt(c.Param("doc"))
+func (ctl *controller) Transfer(c *gin.Context) {
+	documentPayerInt, _ := tools.ConvertStrToInt(c.Param("doc"))
 
-// 	transferRequest := dto.TransferRequest{}
-// 	c.ShouldBindJSON(&transferRequest)
+	transferRequest := dto.TransferRequest{}
+	c.ShouldBindJSON(&transferRequest)
 
-// 	documentPayee := treatDoc(transferRequest.CpfPayee)
+	documentPayee := treatDoc(transferRequest.CpfPayee)
 
-// 	accountPayer := ctl.repo.GetAccountPayer(documentPayerInt)
-// 	fmt.Print(accountPayer)
-// 	accountReceiver := ctl.repo.GetAccountReceiver(documentPayee)
-// 	userPayer := ctl.repo.GetUserPayer(documentPayerInt)
+	accountPayer, err := ctl.repo.GetAccountPayer(documentPayerInt)
+	fmt.Print(accountPayer, err)
 
-// 	balanceError := integrations.ValidateTransfer(accountPayer.Balance, transferRequest.Value)
-// 	if balanceError != nil {
-// 		c.JSON(http.StatusBadRequest, balanceError.Error())
-// 		return
-// 	}
+	accountReceiver, _ := ctl.repo.GetAccountReceiver(documentPayee)
+	userPayer, _ := ctl.repo.GetUserPayer(documentPayerInt)
 
-// 	sellerError := integrations.ValidateIsCommon(userPayer.CategoryID)
-// 	if sellerError != nil {
-// 		c.JSON(http.StatusBadRequest, sellerError.Error())
-// 		return
-// 	}
+	balanceError := ctl.integration.ValidateTransfer(accountPayer.Balance, transferRequest.Value)
+	if balanceError != nil {
+		c.JSON(http.StatusBadRequest, balanceError.Error())
+		return
+	}
 
-// 	transaction := model.Transactions{
-// 		IdPayer:  accountPayer.ID,
-// 		Account:  accountPayer,
-// 		IdPayee:  accountReceiver.ID,
-// 		IdStatus: common.STATUS_PENDENTE,
-// 		Value:    transferRequest.Value,
-// 	}
+	sellerError := ctl.integration.ValidateIsCommon(userPayer.CategoryID)
+	if sellerError != nil {
+		c.JSON(http.StatusBadRequest, sellerError.Error())
+		return
+	}
 
-// 	data, errValid := integrations.ValidateTransaction()
+	transaction := model.Transactions{
+		IdPayer:  accountPayer.ID,
+		Account:  accountPayer,
+		IdPayee:  accountReceiver.ID,
+		IdStatus: common.STATUS_PENDENTE,
+		Value:    transferRequest.Value,
+	}
 
-// 	ctl.repo.CreateTransaction(transaction)
+	data, errValid := ctl.integration.ValidateTransaction()
+	if errValid != nil {
+		c.JSON(http.StatusBadRequest, sellerError.Error())
+		return
+	}
 
-// 	if data.Authorization {
-// 		transaction.IdStatus = common.STATUS_CONCLUIDO
-// 		ctl.DebitScheme(accountPayer, accountReceiver, transaction.Value)
-// 		ctl.repo.UpdateStatusId(transaction.ID)
+	err = ctl.repo.CreateTransaction(transaction)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, sellerError.Error())
+		return
+	}
 
-// 		c.JSON(http.StatusOK, transaction)
-// 	} else {
-// 		fmt.Println("failed to authorize transaction", errValid)
-// 	}
-// }
+	if data.Authorization {
+		transaction.IdStatus = common.STATUS_CONCLUIDO
+		ctl.DebitScheme(accountPayer, accountReceiver, transaction.Value)
+		ctl.repo.UpdateStatusId(transaction.ID)
+
+		c.JSON(http.StatusOK, transaction)
+	} else {
+		fmt.Println("failed to authorize transaction", errValid)
+	}
+}
 
 func treatDoc(doc string) int {
 	documentUnmasked := tools.RemoveMask(&doc)
@@ -144,10 +157,10 @@ func treatDoc(doc string) int {
 	return documentPayeeInt
 }
 
-// func (ctl *controller) DebitScheme(Payer, Payee model.Account, value int) {
-// 	newBalance := Payer.Balance - value
-// 	ctl.repo.RemoveMoney(int(Payer.CpfCnpj), newBalance)
+func (ctl *controller) DebitScheme(Payer, Payee model.Account, value int) {
+	newBalance := Payer.Balance - value
+	ctl.repo.RemoveMoney(int(Payer.CpfCnpj), newBalance)
 
-// 	addBalance := Payee.Balance + value
-// 	ctl.repo.AddMoney(int(Payee.CpfCnpj), addBalance)
-// }
+	addBalance := Payee.Balance + value
+	ctl.repo.AddMoney(int(Payee.CpfCnpj), addBalance)
+}
