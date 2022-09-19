@@ -11,15 +11,18 @@ import (
 	"github.com/henriquecursino/desafioQ2/dto"
 )
 
-type (
-	Integration struct{}
+type IIntegrations interface {
+	ValidateTransaction() (*dto.Authorization, error)
+	ValidateTransfer(payerBalance, value int) error
+	ValidateIsCommon(payerId int) error
+	getExternalApi() ([]byte, error)
+}
 
-	IIntegrations interface {
-		ValidateTransaction() (*dto.Authorization, error)
-		ValidateTransfer(payerBalance, value int) error
-		ValidateIsCommon(payerId int) error
-	}
-)
+type Integration struct{}
+
+func NewIntegration() IIntegrations {
+	return &Integration{}
+}
 
 func (i *Integration) ValidateTransaction() (*dto.Authorization, error) {
 	responseData, err := i.getExternalApi()

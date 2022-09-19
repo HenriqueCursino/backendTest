@@ -10,11 +10,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/henriquecursino/desafioQ2/dto"
+	"github.com/henriquecursino/desafioQ2/integrations"
 	"github.com/henriquecursino/desafioQ2/model"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateNewUser(t *testing.T) {
+	integrations := new(integrations.TestIntegrationMock)
+
 	mockUserBody := dto.UserRequest{
 		CpfCnpj:    "630.652.468-13",
 		FullName:   "Geraldo Gael Andre Galvao",
@@ -34,7 +37,7 @@ func TestCreateNewUser(t *testing.T) {
 		var repository = new(TestRepositoryMock)
 		// mocka o retorno da repository, com as informaçoes já formatadas
 		repository.Mock.On("CreateNewUser", mockUserRepository).Return(nil)
-		controller := NewController(repository)
+		controller := NewController(repository, integrations)
 
 		mockUserJSON, _ := json.Marshal(mockUserBody)
 		mockUserBuffer := bytes.NewBuffer(mockUserJSON)
@@ -53,7 +56,7 @@ func TestCreateNewUser(t *testing.T) {
 		var repository = new(TestRepositoryMock)
 		// mocka o retorno da repository, com as informaçoes já formatadas
 		repository.Mock.On("CreateNewUser", mockUserRepository).Return(errors.New("failed to create user!"))
-		controller := NewController(repository)
+		controller := NewController(repository, integrations)
 
 		mockUserJSON, _ := json.Marshal(mockUserBody)
 		mockUserBuffer := bytes.NewBuffer(mockUserJSON)
@@ -81,9 +84,11 @@ func TestCreateAccount(t *testing.T) {
 	}
 	t.Run("Success - Should return StatusCode 200 (OK)", func(t *testing.T) {
 		repository := new(TestRepositoryMock)
+		integrations := new(integrations.TestIntegrationMock)
+
 		repository.Mock.On("CreateNewAccount", mockAccountRepository).Return(nil)
 
-		controller := NewController(repository)
+		controller := NewController(repository, integrations)
 
 		mockAccountJson, _ := json.Marshal(mockAccountBody)
 		mockAccountBuffer := bytes.NewBuffer(mockAccountJson)
@@ -100,9 +105,11 @@ func TestCreateAccount(t *testing.T) {
 	})
 	t.Run("Failed - Should return StatusCode 400 (Bad Request)", func(t *testing.T) {
 		repository := new(TestRepositoryMock)
+		integrations := new(integrations.TestIntegrationMock)
+
 		repository.Mock.On("CreateNewAccount", mockAccountRepository).Return(assert.AnError)
 
-		controller := NewController(repository)
+		controller := NewController(repository, integrations)
 
 		mockAccountJson, _ := json.Marshal(mockAccountBody)
 		mockAccountBuffer := bytes.NewBuffer(mockAccountJson)
@@ -120,6 +127,8 @@ func TestCreateAccount(t *testing.T) {
 }
 
 func TestUpdateBalance(t *testing.T) {
+	integrations := new(integrations.TestIntegrationMock)
+
 	mockUpdateBalanceBody := dto.AccountRequest{
 		CpfCnpj: "630.652.468-13",
 		Balance: 200,
@@ -130,9 +139,10 @@ func TestUpdateBalance(t *testing.T) {
 	}
 	t.Run("Success - Should return StatusCode 200 (OK)", func(t *testing.T) {
 		repository := new(TestRepositoryMock)
+
 		repository.Mock.On("UpdateAccountBalance", mockUpdateBalanceRepository).Return(nil)
 
-		controller := NewController(repository)
+		controller := NewController(repository, integrations)
 
 		mockAccountJson, _ := json.Marshal(mockUpdateBalanceBody)
 		mockAccountBuffer := bytes.NewBuffer(mockAccountJson)
@@ -151,7 +161,7 @@ func TestUpdateBalance(t *testing.T) {
 		repository := new(TestRepositoryMock)
 		repository.Mock.On("UpdateAccountBalance", mockUpdateBalanceRepository).Return(assert.AnError)
 
-		controller := NewController(repository)
+		controller := NewController(repository, integrations)
 
 		mockAccountJson, _ := json.Marshal(mockUpdateBalanceBody)
 		mockAccountBuffer := bytes.NewBuffer(mockAccountJson)
@@ -212,10 +222,6 @@ func TestGetAccountPayer(t *testing.T) {
 		ID:   1,
 		Name: "Pendente",
 	}
-	// mockStatusTransactionConcluded := model.Status{
-	// 	ID:   2,
-	// 	Name: "Concluido",
-	// }
 
 	transactionBody := dto.TransferRequest{
 		CpfPayee: "111.222.333-44",
@@ -230,20 +236,28 @@ func TestGetAccountPayer(t *testing.T) {
 		Value:    10,
 	}
 
-	auth := dto.Authorization{}
+	auth := dto.Authorization{
+		Authorization: true,
+	}
+
+	mockNewBalancePayer := 90
+	mockNewBalanceReceiver := 110
 
 	t.Run("Success - Should return StatusCode 200 (OK)", func(t *testing.T) {
 		repository := new(TestRepositoryMock)
+		integrations := new(integrations.TestIntegrationMock)
 		repository.Mock.On("GetAccountPayer", mockIdPayer).Return(mockAccountPayer, nil)
-		repository.Mock.On("GetAccountReceiver", transactionAccount).Return(mockAccountPayer, nil)
+		repository.Mock.On("GetAccountReceiver", transactionAccount).Return(mockAccountReciver, nil)
 		repository.Mock.On("GetUserPayer", mockIdPayer).Return(mockPayer, nil)
-		repository.Mock.On("ValidateTransfer", mockAccountPayer.Balance, transactionBody.Value).Return(nil)
-		repository.Mock.On("ValidateIsCommon", mockPayer.CategoryID).Return(nil)
-		repository.Mock.On("ValidateTransaction").Return(auth, nil)
+		integrations.Mock.On("ValidateTransfer", mockAccountPayer.Balance, transactionBody.Value).Return(nil)
+		integrations.Mock.On("ValidateIsCommon", mockPayer.CategoryID).Return(nil)
+		integrations.Mock.On("ValidateTransaction").Return(&auth, nil)
 		repository.Mock.On("CreateTransaction", transactionRepository).Return(nil)
+		repository.Mock.On("RemoveMoney", mockPayer.CpfCnpj, mockNewBalancePayer).Return(nil)
+		repository.Mock.On("AddMoney", mockReciver.CpfCnpj, mockNewBalanceReceiver).Return(nil)
 		repository.Mock.On("UpdateStatusId", transactionRepository.ID).Return(nil)
 
-		controller := NewController(repository)
+		controller := NewController(repository, integrations)
 
 		mockTransferJson, _ := json.Marshal(transactionBody)
 		mockTransferBuffer := bytes.NewBuffer(mockTransferJson)

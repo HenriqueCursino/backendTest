@@ -13,8 +13,8 @@ type Repository interface {
 	CreateTransaction(transaction model.Transactions) error
 
 	UpdateStatusId(where int) error
-	RemoveMoney(where, newBalance int) error
-	AddMoney(where, newBalance int) error
+	RemoveMoney(where int64, newBalance int) error
+	AddMoney(where int64, newBalance int) error
 	GetAccountPayer(document int) (model.Account, error)
 	GetAccountReceiver(document int) (model.Account, error)
 	GetUserPayer(document int) (model.User, error)
@@ -73,7 +73,7 @@ func (repo *repository) UpdateStatusId(where int) error {
 	return nil
 }
 
-func (repo *repository) RemoveMoney(where, newBalance int) error {
+func (repo *repository) RemoveMoney(where int64, newBalance int) error {
 	err := repo.db.
 		Table("accounts").
 		Where("cpf_cnpj = ?", where).
@@ -85,7 +85,7 @@ func (repo *repository) RemoveMoney(where, newBalance int) error {
 	return nil
 }
 
-func (repo *repository) AddMoney(where, newBalance int) error {
+func (repo *repository) AddMoney(where int64, newBalance int) error {
 	err := repo.db.
 		Table("accounts").
 		Where("cpf_cnpj = ?", where).

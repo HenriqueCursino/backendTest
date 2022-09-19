@@ -1,20 +1,17 @@
 package controller
 
 import (
-	"github.com/henriquecursino/desafioQ2/dto"
 	"github.com/henriquecursino/desafioQ2/model"
 	"github.com/stretchr/testify/mock"
 )
 
-type (
-	TestIntegrationMock struct {
-		mock.Mock
-	}
+type ControllerMock struct {
+	mock.Mock
+}
 
-	TestRepositoryMock struct {
-		mock.Mock
-	}
-)
+type TestRepositoryMock struct {
+	mock.Mock
+}
 
 // pegar o primeiro erro da função
 func (repository *TestRepositoryMock) CreateNewUser(user model.User) error {
@@ -46,14 +43,14 @@ func (repository *TestRepositoryMock) UpdateStatusId(where int) error {
 	return getted
 }
 
-func (repository *TestRepositoryMock) RemoveMoney(where, newBalance int) error {
-	args := repository.Called(where)
+func (repository *TestRepositoryMock) RemoveMoney(where int64, newBalance int) error {
+	args := repository.Called(where, newBalance)
 	getted := args.Error(0)
 	return getted
 }
 
-func (repository *TestRepositoryMock) AddMoney(where, newBalance int) error {
-	args := repository.Called(where)
+func (repository *TestRepositoryMock) AddMoney(where int64, newBalance int) error {
+	args := repository.Called(where, newBalance)
 	getted := args.Error(0)
 	return getted
 }
@@ -72,20 +69,4 @@ func (repository *TestRepositoryMock) CreateTransaction(transaction model.Transa
 	args := repository.Called(transaction)
 	getted := args.Error(0)
 	return getted
-}
-
-//
-func (integrations *TestRepositoryMock) ValidateTransaction() (*dto.Authorization, error) {
-	args := integrations.Called()
-	return args.Get(0).(*dto.Authorization), args.Error(1)
-}
-
-func (integrations *TestRepositoryMock) ValidateTransfer(payerBalance, value int) error {
-	args := integrations.Called()
-	return args.Error(1)
-}
-
-func (integrations *TestRepositoryMock) ValidateIsCommon(payerId int) error {
-	args := integrations.Called()
-	return args.Error(1)
 }

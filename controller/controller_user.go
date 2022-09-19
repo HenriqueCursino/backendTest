@@ -21,13 +21,14 @@ type Controller interface {
 
 type controller struct {
 	repo        Repository
-	integration integrations.Integration
+	integration integrations.IIntegrations
 }
 
 // função para receber os métodos da interface
-func NewController(repo Repository) Controller {
+func NewController(repo Repository, integration integrations.IIntegrations) Controller {
 	return &controller{
-		repo: repo,
+		repo,
+		integration,
 	}
 }
 
@@ -143,7 +144,11 @@ func (ctl *controller) Transfer(c *gin.Context) {
 	if data.Authorization {
 		transaction.IdStatus = common.STATUS_CONCLUIDO
 		ctl.DebitScheme(accountPayer, accountReceiver, transaction.Value)
-		ctl.repo.UpdateStatusId(transaction.ID)
+		err := ctl.repo.UpdateStatusId(transaction.ID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, sellerError.Error())
+			return
+		}
 
 		c.JSON(http.StatusOK, transaction)
 	} else {
@@ -159,8 +164,8 @@ func treatDoc(doc string) int {
 
 func (ctl *controller) DebitScheme(Payer, Payee model.Account, value int) {
 	newBalance := Payer.Balance - value
-	ctl.repo.RemoveMoney(int(Payer.CpfCnpj), newBalance)
+	ctl.repo.RemoveMoney(Payer.CpfCnpj, newBalance)
 
 	addBalance := Payee.Balance + value
-	ctl.repo.AddMoney(int(Payee.CpfCnpj), addBalance)
+	ctl.repo.AddMoney(Payee.CpfCnpj, addBalance)
 }

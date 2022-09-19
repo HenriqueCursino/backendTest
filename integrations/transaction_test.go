@@ -1,85 +1,102 @@
 package integrations
 
-// type Spy struct {
-// 	arrayBytes    []byte
-// 	expectedError error
-// }
+import (
+	"fmt"
+	"os"
+	"testing"
 
-// func (s *Spy) GetExternalApi() ([]byte, error) {
-// 	return s.arrayBytes, s.expectedError
-// }
+	"github.com/stretchr/testify/assert"
+)
 
-// func TestValidateTransaction(t *testing.T) {
-// 	t.Run("sucess - authorized transaction", func(t *testing.T) {
-// 		os.Setenv("EXTERNAL_URL", "http://run.mocky.io/v3/")
-// 		defer os.Unsetenv("EXTERNAL_URL")
+type Spy struct {
+	arrayBytes    []byte
+	expectedError error
+}
 
-// 		_, err := ValidateTransaction()
+func (s *Spy) GetExternalApi() ([]byte, error) {
+	return s.arrayBytes, s.expectedError
+}
 
-// 		assert.Nil(t, err)
-// 	})
-// 	t.Run("failed - transaction not authorized", func(t *testing.T) {
-// 		_, err := ValidateTransaction()
+func TestValidateTransaction(t *testing.T) {
+	inte := NewIntegration()
+	t.Run("sucess - authorized transaction", func(t *testing.T) {
 
-// 		assert.Error(t, err)
-// 	})
-// }
+		os.Setenv("EXTERNAL_URL", "http://run.mocky.io/v3/")
+		defer os.Unsetenv("EXTERNAL_URL")
 
-// func TestGetExternalApi(t *testing.T) {
-// 	t.Run("sucess - get external api", func(t *testing.T) {
-// 		defer os.Unsetenv("EXTERNAL_URL")
+		_, err := inte.ValidateTransaction()
 
-// 		os.Setenv("EXTERNAL_URL", "https://run.mocky.io/v3/")
-// 		_, err := getExternalApi()
+		assert.Nil(t, err)
+	})
+	t.Run("failed - transaction not authorized", func(t *testing.T) {
+		_, err := inte.ValidateTransaction()
 
-// 		assert.Nil(t, err)
-// 	})
-// 	t.Run("failed - request return nil", func(t *testing.T) {
-// 		defer os.Unsetenv("EXTERNAL_URL")
+		assert.Error(t, err)
+	})
+}
 
-// 		os.Setenv("EXTERNAL_URL", "")
-// 		_, err := getExternalApi()
+func ValidateTransaction() {
+	panic("unimplemented")
+}
 
-// 		assert.NotNil(t, err)
-// 	})
-// }
+func TestGetExternalApi(t *testing.T) {
+	inte := NewIntegration()
 
-// func TestValidateTransfer(t *testing.T) {
-// 	t.Run("failed - user has enough money", func(t *testing.T) {
-// 		mockedValue := 100
-// 		mockedBalance := 20
-// 		expectedError := "payer doesn't have enough money"
+	t.Run("sucess - get external api", func(t *testing.T) {
+		defer os.Unsetenv("EXTERNAL_URL")
 
-// 		receivedValue := ValidateTransfer(mockedBalance, mockedValue)
+		os.Setenv("EXTERNAL_URL", "https://run.mocky.io/v3/")
+		_, err := inte.getExternalApi()
 
-// 		assert.Equal(t, fmt.Errorf(expectedError), receivedValue)
-// 	})
-// 	t.Run("sucess - user have money to make the transfer", func(t *testing.T) {
-// 		mockedValue := 20
-// 		mockedBalance := 100
+		assert.Nil(t, err)
+	})
+	t.Run("failed - request return nil", func(t *testing.T) {
+		defer os.Unsetenv("EXTERNAL_URL")
 
-// 		receivedValue := ValidateTransfer(mockedBalance, mockedValue)
+		os.Setenv("EXTERNAL_URL", "")
+		_, err := inte.getExternalApi()
 
-// 		assert.Equal(t, nil, receivedValue)
-// 	})
-// }
+		assert.NotNil(t, err)
+	})
+}
 
-// func TestValidateIsCommon(t *testing.T) {
+func TestValidateTransfer(t *testing.T) {
+	inte := NewIntegration()
+	t.Run("failed - user has enough money", func(t *testing.T) {
+		mockedValue := 100
+		mockedBalance := 20
+		expectedError := "payer doesn't have enough money"
 
-// 	t.Run("sucess - user(seller) can't transfer", func(t *testing.T) {
-// 		mockedIdSeller := 1
-// 		expectedError := "shopkeeper cannot make transfers"
+		receivedValue := inte.ValidateTransfer(mockedBalance, mockedValue)
 
-// 		receivedValue := ValidateIsCommon(mockedIdSeller)
+		assert.Equal(t, fmt.Errorf(expectedError), receivedValue)
+	})
+	t.Run("sucess - user have money to make the transfer", func(t *testing.T) {
+		mockedValue := 20
+		mockedBalance := 100
 
-// 		assert.Equal(t, fmt.Errorf(expectedError), receivedValue)
-// 	})
+		receivedValue := inte.ValidateTransfer(mockedBalance, mockedValue)
 
-// 	t.Run("sucess - user(common) can transfer", func(t *testing.T) {
-// 		mockedIdCommon := 2
+		assert.Equal(t, nil, receivedValue)
+	})
+}
 
-// 		receivedValue := ValidateIsCommon(mockedIdCommon)
+func TestValidateIsCommon(t *testing.T) {
+	inte := NewIntegration()
+	t.Run("sucess - user(seller) can't transfer", func(t *testing.T) {
+		mockedIdSeller := 1
+		expectedError := "shopkeeper cannot make transfers"
 
-// 		assert.Equal(t, nil, receivedValue)
-// 	})
-// }
+		receivedValue := inte.ValidateIsCommon(mockedIdSeller)
+
+		assert.Equal(t, fmt.Errorf(expectedError), receivedValue)
+	})
+
+	t.Run("sucess - user(common) can transfer", func(t *testing.T) {
+		mockedIdCommon := 2
+
+		receivedValue := inte.ValidateIsCommon(mockedIdCommon)
+
+		assert.Equal(t, nil, receivedValue)
+	})
+}
