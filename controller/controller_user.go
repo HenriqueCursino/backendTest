@@ -131,13 +131,13 @@ func (ctl *controller) Transfer(c *gin.Context) {
 
 	data, errValid := ctl.integration.ValidateTransaction()
 	if errValid != nil {
-		c.JSON(http.StatusBadRequest, sellerError.Error())
+		c.JSON(http.StatusBadRequest, errValid.Error())
 		return
 	}
 
 	err = ctl.repo.CreateTransaction(transaction)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, sellerError.Error())
+		c.JSON(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -146,13 +146,11 @@ func (ctl *controller) Transfer(c *gin.Context) {
 		ctl.DebitScheme(accountPayer, accountReceiver, transaction.Value)
 		err := ctl.repo.UpdateStatusId(transaction.ID)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, sellerError.Error())
+			c.JSON(http.StatusBadRequest, err.Error())
 			return
 		}
 
 		c.JSON(http.StatusOK, transaction)
-	} else {
-		fmt.Println("failed to authorize transaction", errValid)
 	}
 }
 

@@ -55,7 +55,7 @@ func TestCreateNewUser(t *testing.T) {
 	t.Run("Failed - Should return StatusCode 400 (BadRequest)", func(t *testing.T) {
 		var repository = new(TestRepositoryMock)
 		// mocka o retorno da repository, com as informaçoes já formatadas
-		repository.Mock.On("CreateNewUser", mockUserRepository).Return(errors.New("failed to create user!"))
+		repository.Mock.On("CreateNewUser", mockUserRepository).Return(assert.AnError)
 		controller := NewController(repository, integrations)
 
 		mockUserJSON, _ := json.Marshal(mockUserBody)
@@ -272,5 +272,142 @@ func TestGetAccountPayer(t *testing.T) {
 		controller.Transfer(ctx)
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+	})
+	t.Run("Failed - Should return StatusCode 400 (BadRequest)", func(t *testing.T) {
+		repository := new(TestRepositoryMock)
+		integrations := new(integrations.TestIntegrationMock)
+
+		repository.Mock.On("GetAccountPayer", mockIdPayer).Return(mockAccountPayer, nil)
+		repository.Mock.On("GetAccountReceiver", transactionAccount).Return(mockAccountReciver, nil)
+		repository.Mock.On("GetUserPayer", mockIdPayer).Return(mockPayer, nil)
+		integrations.Mock.On("ValidateTransfer", mockAccountPayer.Balance, transactionBody.Value).Return(errors.New("failed to validate transfer!"))
+
+		controller := NewController(repository, integrations)
+
+		mockTransferJson, _ := json.Marshal(transactionBody)
+		mockTransferBuffer := bytes.NewBuffer(mockTransferJson)
+
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+
+		req, _ := http.NewRequest(http.MethodPost, "/", mockTransferBuffer)
+		ctx.Params = append(ctx.Params, gin.Param{Key: "doc", Value: mockIdPayerParams})
+		ctx.Request = req
+
+		controller.Transfer(ctx)
+
+		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+	})
+	t.Run("Failed - Should return StatusCode 400 (BadRequest)", func(t *testing.T) {
+		repository := new(TestRepositoryMock)
+		integrations := new(integrations.TestIntegrationMock)
+
+		repository.Mock.On("GetAccountPayer", mockIdPayer).Return(mockAccountPayer, nil)
+		repository.Mock.On("GetAccountReceiver", transactionAccount).Return(mockAccountReciver, nil)
+		repository.Mock.On("GetUserPayer", mockIdPayer).Return(mockPayer, nil)
+		integrations.Mock.On("ValidateTransfer", mockAccountPayer.Balance, transactionBody.Value).Return(nil)
+		integrations.Mock.On("ValidateIsCommon", mockPayer.CategoryID).Return(assert.AnError)
+
+		controller := NewController(repository, integrations)
+
+		mockTransferJson, _ := json.Marshal(transactionBody)
+		mockTransferBuffer := bytes.NewBuffer(mockTransferJson)
+
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+
+		req, _ := http.NewRequest(http.MethodPost, "/", mockTransferBuffer)
+		ctx.Params = append(ctx.Params, gin.Param{Key: "doc", Value: mockIdPayerParams})
+		ctx.Request = req
+
+		controller.Transfer(ctx)
+
+		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+	})
+	t.Run("Failed - Should return StatusCode 400 (BadRequest)", func(t *testing.T) {
+		repository := new(TestRepositoryMock)
+		integrations := new(integrations.TestIntegrationMock)
+
+		repository.Mock.On("GetAccountPayer", mockIdPayer).Return(mockAccountPayer, nil)
+		repository.Mock.On("GetAccountReceiver", transactionAccount).Return(mockAccountReciver, nil)
+		repository.Mock.On("GetUserPayer", mockIdPayer).Return(mockPayer, nil)
+		integrations.Mock.On("ValidateTransfer", mockAccountPayer.Balance, transactionBody.Value).Return(nil)
+		integrations.Mock.On("ValidateIsCommon", mockPayer.CategoryID).Return(nil)
+		integrations.Mock.On("ValidateTransaction").Return(&auth, assert.AnError)
+
+		controller := NewController(repository, integrations)
+
+		mockTransferJson, _ := json.Marshal(transactionBody)
+		mockTransferBuffer := bytes.NewBuffer(mockTransferJson)
+
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+
+		req, _ := http.NewRequest(http.MethodPost, "/", mockTransferBuffer)
+		ctx.Params = append(ctx.Params, gin.Param{Key: "doc", Value: mockIdPayerParams})
+		ctx.Request = req
+
+		controller.Transfer(ctx)
+
+		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+	})
+	t.Run("Failed - Should return StatusCode 400 (BadRequest)", func(t *testing.T) {
+		repository := new(TestRepositoryMock)
+		integrations := new(integrations.TestIntegrationMock)
+
+		repository.Mock.On("GetAccountPayer", mockIdPayer).Return(mockAccountPayer, nil)
+		repository.Mock.On("GetAccountReceiver", transactionAccount).Return(mockAccountReciver, nil)
+		repository.Mock.On("GetUserPayer", mockIdPayer).Return(mockPayer, nil)
+		integrations.Mock.On("ValidateTransfer", mockAccountPayer.Balance, transactionBody.Value).Return(nil)
+		integrations.Mock.On("ValidateIsCommon", mockPayer.CategoryID).Return(nil)
+		integrations.Mock.On("ValidateTransaction").Return(&auth, nil)
+		repository.Mock.On("CreateTransaction", transactionRepository).Return(assert.AnError)
+
+		controller := NewController(repository, integrations)
+
+		mockTransferJson, _ := json.Marshal(transactionBody)
+		mockTransferBuffer := bytes.NewBuffer(mockTransferJson)
+
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+
+		req, _ := http.NewRequest(http.MethodPost, "/", mockTransferBuffer)
+		ctx.Params = append(ctx.Params, gin.Param{Key: "doc", Value: mockIdPayerParams})
+		ctx.Request = req
+
+		controller.Transfer(ctx)
+
+		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+	})
+	t.Run("Failed - Should return StatusCode 400 (BadRequest)", func(t *testing.T) {
+		repository := new(TestRepositoryMock)
+		integrations := new(integrations.TestIntegrationMock)
+
+		repository.Mock.On("GetAccountPayer", mockIdPayer).Return(mockAccountPayer, nil)
+		repository.Mock.On("GetAccountReceiver", transactionAccount).Return(mockAccountReciver, nil)
+		repository.Mock.On("GetUserPayer", mockIdPayer).Return(mockPayer, nil)
+		integrations.Mock.On("ValidateTransfer", mockAccountPayer.Balance, transactionBody.Value).Return(nil)
+		integrations.Mock.On("ValidateIsCommon", mockPayer.CategoryID).Return(nil)
+		integrations.Mock.On("ValidateTransaction").Return(&auth, nil)
+		repository.Mock.On("CreateTransaction", transactionRepository).Return(nil)
+		repository.Mock.On("RemoveMoney", mockPayer.CpfCnpj, mockNewBalancePayer).Return(nil)
+		repository.Mock.On("AddMoney", mockReciver.CpfCnpj, mockNewBalanceReceiver).Return(nil)
+		repository.Mock.On("UpdateStatusId", transactionRepository.ID).Return(assert.AnError)
+
+		controller := NewController(repository, integrations)
+
+		mockTransferJson, _ := json.Marshal(transactionBody)
+		mockTransferBuffer := bytes.NewBuffer(mockTransferJson)
+
+		w := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(w)
+
+		req, _ := http.NewRequest(http.MethodPost, "/", mockTransferBuffer)
+		ctx.Params = append(ctx.Params, gin.Param{Key: "doc", Value: mockIdPayerParams})
+		ctx.Request = req
+
+		controller.Transfer(ctx)
+
+		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 	})
 }
