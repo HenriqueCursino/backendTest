@@ -3,6 +3,7 @@ module github.com/henriquecursino/desafioQ2
 go 1.18
 
 require (
+	github.com/brianvoe/gofakeit/v6 v6.19.0
 	github.com/joho/godotenv v1.4.0
 	gorm.io/gorm v1.23.8
 )
